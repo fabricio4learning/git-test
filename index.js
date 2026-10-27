@@ -108,7 +108,7 @@ const container = blessed.box({
   left: 'center',
 
   width: 76,
-  height: 24,
+  height: 26,
 
   border: {
     type: 'line'
@@ -248,7 +248,7 @@ const menu = blessed.list({
 const footer = blessed.box({
   parent: container,
 
-  bottom: 1,
+  bottom: 2,
   left: 'center',
 
   width: '100%-2',
@@ -266,6 +266,31 @@ const footer = blessed.box({
 });
 
 // ==========================================
+// STATUS BAR
+// ==========================================
+
+const statusBar = blessed.box({
+  parent: container,
+
+  bottom: 0,
+  left: 'center',
+
+  width: '100%-4',
+  height: 1,
+
+  content: '',
+
+  align: 'center',
+
+  tags: true,
+
+  style: {
+    bg: 'default',
+    fg: theme.muted
+  }
+});
+
+// ==========================================
 // ESTADO
 // ==========================================
 
@@ -273,7 +298,6 @@ let fraseAtual = obterFraseDoDia();
 
 let modalAberto = false;
 let modalAtual = null;
-let mensagemAtual = null;
 
 // ==========================================
 // ATUALIZAR FRASE
@@ -557,50 +581,40 @@ function abrirModalNotificacao() {
 // FEEDBACK
 // ==========================================
 
-function exibirMensagem(texto, cor = theme.primary) {
-  if (mensagemAtual) {
-    mensagemAtual.destroy();
+let mensagemTimeout = null;
+
+function exibirMensagem(texto, tipo = 'success') {
+  const estilos = {
+    success: {
+      icone: '✓',
+      cor: theme.primary
+    },
+    error: {
+      icone: '✗',
+      cor: theme.error
+    },
+    info: {
+      icone: '●',
+      cor: theme.muted
+    }
+  };
+
+  const estilo = estilos[tipo] || estilos.info;
+
+  if (mensagemTimeout) {
+    clearTimeout(mensagemTimeout);
   }
 
-  const mensagem = blessed.box({
-    parent: screen,
-
-    top: 'center',
-    left: 'center',
-
-    width: 52,
-    height: 5,
-
-    border: {
-      type: 'line'
-    },
-
-    content: texto,
-
-    align: 'center',
-    valign: 'middle',
-
-    style: {
-      bg: theme.bg,
-      fg: cor,
-
-      border: {
-        fg: cor
-      }
-    }
-  });
-
-  mensagemAtual = mensagem;
+  statusBar.setContent(`${estilo.icone} ${texto}`);
+  statusBar.style.fg = estilo.cor;
 
   screen.render();
 
-  setTimeout(() => {
-    if (mensagemAtual === mensagem) {
-      mensagem.destroy();
-      mensagemAtual = null;
-      screen.render();
-    }
-  }, 2000);
+  mensagemTimeout = setTimeout(() => {
+    statusBar.setContent('');
+    screen.render();
+    mensagemTimeout = null;
+  }, 3000);
 }
 
 // ==========================================

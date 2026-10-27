@@ -12,6 +12,7 @@
   "type": "commonjs",
   "dependencies": {
     "chalk": "^4.1.2",
-    "figlet": "^1.12.0"
+    "figlet": "^1.12.0",
+    "node-notifier": "^11.0.0"
   }
 }

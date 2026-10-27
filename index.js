@@ -73,15 +73,17 @@ function obterDataFormatada() {
 // ==========================================
 
 const theme = {
-  bg: '#1e222a',
-  surface: '#282c34',
-  border: '#61afef',
-  primary: '#98c379',
-  text: '#abb2bf',
-  muted: '#5c6370',
-  yellow: '#e5c07b',
-  red: '#e06c75',
-  purple: '#c678dd'
+  bg: 'default',
+  fg: 'default',
+
+  primary: '#8FBC9F',
+  secondary: '#6B7280',
+  muted: '#9CA3AF',
+
+  accent: '#A3BE8C',
+  quote: '#D8C49A',
+
+  error: '#BF8888'
 };
 
 // ==========================================
@@ -94,12 +96,6 @@ const screen = blessed.screen({
   title: 'Frase do Dia',
   autoPadding: true
 });
-
-screen.program.hideCursor();
-
-screen.style = {
-  bg: theme.bg
-};
 
 // ==========================================
 // CONTAINER PRINCIPAL
@@ -120,8 +116,10 @@ const container = blessed.box({
 
   style: {
     bg: theme.bg,
+    fg: theme.fg,
+
     border: {
-      fg: theme.border
+      fg: theme.primary
     }
   }
 });
@@ -134,11 +132,11 @@ const ascii = figlet.textSync('Frase do Dia', {
   font: 'Small'
 });
 
-blessed.box({
+const header = blessed.box({
   parent: container,
 
   top: 1,
-  left: 0,
+  left: 'center',
 
   width: '100%-2',
   height: 6,
@@ -148,13 +146,13 @@ blessed.box({
   align: 'center',
 
   style: {
-    fg: theme.primary,
-    bg: theme.bg
+    bg: theme.bg,
+    fg: theme.primary
   }
 });
 
 // ==========================================
-// FRASE
+// FRASE DO DIA
 // ==========================================
 
 const quoteBox = blessed.box({
@@ -185,11 +183,11 @@ const quoteBox = blessed.box({
   },
 
   style: {
-    bg: theme.surface,
-    fg: theme.yellow,
+    bg: theme.bg,
+    fg: theme.quote,
 
     border: {
-      fg: theme.yellow
+      fg: theme.secondary
     },
 
     label: {
@@ -202,13 +200,20 @@ const quoteBox = blessed.box({
 // MENU
 // ==========================================
 
+const menuItems = [
+  'Atualizar frase',
+  'Adicionar nova frase',
+  'Agendar notificação',
+  'Sair'
+];
+
 const menu = blessed.list({
   parent: container,
 
   top: 15,
   left: 'center',
 
-  width: '80%',
+  width: '70%',
   height: 5,
 
   keys: true,
@@ -217,23 +222,20 @@ const menu = blessed.list({
 
   interactive: true,
 
-  items: [
-    '  Atualizar frase',
-    '  Adicionar nova frase',
-    '  Agendar notificação',
-    '  Sair'
-  ],
+  items: menuItems.map(item => `  ❯ ${item}`),
 
   style: {
-    bg: theme.bg,
+    bg: 'default',
+    fg: theme.fg,
 
     item: {
-      fg: theme.text
+      bg: 'default',
+      fg: theme.muted
     },
 
     selected: {
-      bg: theme.border,
-      fg: theme.bg,
+      bg: 'default',
+      fg: theme.accent,
       bold: true
     }
   }
@@ -243,22 +245,23 @@ const menu = blessed.list({
 // FOOTER
 // ==========================================
 
-blessed.box({
+const footer = blessed.box({
   parent: container,
 
   bottom: 1,
-  left: 0,
+  left: 'center',
 
   width: '100%-2',
   height: 1,
 
-  content: '↑/↓ Navegar  •  ENTER Selecionar  •  Q Sair',
+  content:
+    '↑/↓ Navegar  •  ENTER Selecionar  •  ESC Sair',
 
   align: 'center',
 
   style: {
-    fg: theme.muted,
-    bg: theme.bg
+    bg: theme.bg,
+    fg: theme.muted
   }
 });
 
@@ -267,17 +270,18 @@ blessed.box({
 // ==========================================
 
 let fraseAtual = obterFraseDoDia();
+
 let modalAberto = false;
 let modalAtual = null;
 let mensagemAtual = null;
 
 // ==========================================
-// ATUALIZAÇÃO
+// ATUALIZAR FRASE
 // ==========================================
 
 function atualizarTela() {
   quoteBox.setContent(
-    `{center}${fraseAtual}{/center}`
+    `{center}"${fraseAtual}"{/center}`
   );
 
   screen.render();
@@ -288,13 +292,11 @@ function atualizarFrase() {
 
   if (frases.length === 0) return;
 
-  if (frases.length === 1) {
-    fraseAtual = frases[0];
-  } else {
-    const alternativas = frases.filter(
-      frase => frase !== fraseAtual
-    );
+  const alternativas = frases.filter(
+    frase => frase !== fraseAtual
+  );
 
+  if (alternativas.length > 0) {
     fraseAtual = alternativas[
       Math.floor(Math.random() * alternativas.length)
     ];
@@ -314,22 +316,8 @@ function criarModal(titulo, cor = theme.primary) {
 
   menu.hide();
 
-  const overlay = blessed.box({
-    parent: screen,
-
-    top: 0,
-    left: 0,
-
-    width: '100%',
-    height: '100%',
-
-    style: {
-      bg: theme.bg
-    }
-  });
-
   const modal = blessed.box({
-    parent: overlay,
+    parent: screen,
 
     top: 'center',
     left: 'center',
@@ -349,8 +337,8 @@ function criarModal(titulo, cor = theme.primary) {
     },
 
     style: {
-      bg: theme.surface,
-      fg: theme.text,
+      bg: theme.bg,
+      fg: theme.fg,
 
       border: {
         fg: cor
@@ -363,7 +351,7 @@ function criarModal(titulo, cor = theme.primary) {
     }
   });
 
-  modalAtual = overlay;
+  modalAtual = modal;
 
   return modal;
 }
@@ -385,19 +373,17 @@ function fecharModal() {
   menu.show();
   menu.focus();
 
-  screen.program.hideCursor();
   screen.render();
 }
 
 // ==========================================
-// INPUT MODAL
+// MODAL DE INPUT
 // ==========================================
 
 function abrirModalInput({
   titulo,
   descricao,
   cor,
-  placeholder,
   onSubmit
 }) {
   const modal = criarModal(titulo, cor);
@@ -416,8 +402,8 @@ function abrirModalInput({
     content: descricao,
 
     style: {
-      bg: theme.surface,
-      fg: theme.text
+      bg: theme.bg,
+      fg: theme.muted
     }
   });
 
@@ -437,15 +423,14 @@ function abrirModalInput({
     inputOnFocus: false,
 
     keys: true,
-
     mouse: true,
 
     style: {
       bg: theme.bg,
-      fg: theme.text,
+      fg: theme.fg,
 
       border: {
-        fg: theme.muted
+        fg: theme.secondary
       },
 
       focus: {
@@ -455,8 +440,6 @@ function abrirModalInput({
       }
     }
   });
-
-  input.setValue(placeholder || '');
 
   blessed.box({
     parent: modal,
@@ -472,7 +455,7 @@ function abrirModalInput({
     align: 'center',
 
     style: {
-      bg: theme.surface,
+      bg: theme.bg,
       fg: theme.muted
     }
   });
@@ -482,14 +465,11 @@ function abrirModalInput({
     onSubmit(value);
   });
 
-  input.on('cancel', () => {
-    fecharModal();
-  });
+  input.on('cancel', fecharModal);
 
   input.focus();
 
   screen.render();
-
   input.readInput();
 }
 
@@ -505,13 +485,11 @@ function abrirModalAdicionar() {
 
     cor: theme.primary,
 
-    placeholder: '',
-
     onSubmit(value) {
       if (!value || !value.trim()) {
         exibirMensagem(
           'A frase não pode estar vazia.',
-          theme.red
+          theme.error
         );
 
         return;
@@ -532,7 +510,7 @@ function abrirModalAdicionar() {
 }
 
 // ==========================================
-// NOTIFICAÇÃO
+// AGENDAR NOTIFICAÇÃO
 // ==========================================
 
 function abrirModalNotificacao() {
@@ -541,9 +519,7 @@ function abrirModalNotificacao() {
 
     descricao: 'Receber notificação em quantos minutos?',
 
-    cor: theme.purple,
-
-    placeholder: '',
+    cor: theme.accent,
 
     onSubmit(value) {
       const minutos = Number(value);
@@ -555,7 +531,7 @@ function abrirModalNotificacao() {
       ) {
         exibirMensagem(
           'Informe um tempo válido.',
-          theme.red
+          theme.error
         );
 
         return;
@@ -571,7 +547,7 @@ function abrirModalNotificacao() {
 
       exibirMensagem(
         `Notificação agendada para ${minutos} min.`,
-        theme.purple
+        theme.accent
       );
     }
   });
@@ -605,7 +581,7 @@ function exibirMensagem(texto, cor = theme.primary) {
     valign: 'middle',
 
     style: {
-      bg: theme.surface,
+      bg: theme.bg,
       fg: cor,
 
       border: {
@@ -628,7 +604,7 @@ function exibirMensagem(texto, cor = theme.primary) {
 }
 
 // ==========================================
-// EVENTOS
+// EVENTOS DO MENU
 // ==========================================
 
 menu.on('select', (_, index) => {
@@ -665,9 +641,7 @@ function encerrar() {
 screen.key(['C-c'], encerrar);
 
 screen.key(['q'], () => {
-  if (!modalAberto) {
-    encerrar();
-  }
+  if (!modalAberto) encerrar();
 });
 
 screen.key(['escape'], () => {
@@ -684,6 +658,7 @@ screen.key(['escape'], () => {
 
 atualizarTela();
 
+menu.select(0);
 menu.focus();
 
 screen.render();

@@ -1,165 +1,689 @@
-const readline = require('readline');
+const blessed = require('blessed');
 const fs = require('fs');
 const path = require('path');
-const chalk = require('chalk');
 const figlet = require('figlet');
 const notifier = require('node-notifier');
 
 const filePath = path.join(__dirname, 'frases.json');
 
 const frasesIniciais = [
-  "O sucesso é a soma de pequenos esforços repetidos dia após dia.",
-  "Acredite que você pode e você já está no meio do caminho.",
-  "Não espere por oportunidades, crie-as.",
-  "Que o seu dia seja tão incrível quanto você!",
-  "A persistência é o caminho do êxito.",
-  "Você é mais forte do que imagina e mais capaz do que jamais sonhou.",
-  "Pequenas atitudes geram grandes transformações."
+  'O sucesso é a soma de pequenos esforços repetidos dia após dia.',
+  'Acredite que você pode e você já está no meio do caminho.',
+  'Não espere por oportunidades, crie-as.',
+  'Que o seu dia seja tão incrível quanto você!',
+  'A persistência é o caminho do êxito.',
+  'Você é mais forte do que imagina e mais capaz do que jamais sonhou.',
+  'Pequenas atitudes geram grandes transformações.'
 ];
 
-const rl = readline.createInterface({
-  input: process.stdin,
-  output: process.stdout
-});
+// ==========================================
+// DADOS
+// ==========================================
 
-// ==========================================
-// GERENCIAMENTO DE DADOS
-// ==========================================
 function obterFrases() {
   if (!fs.existsSync(filePath)) {
-    fs.writeFileSync(filePath, JSON.stringify(frasesIniciais, null, 2));
-    return frasesIniciais;
+    fs.writeFileSync(
+      filePath,
+      JSON.stringify(frasesIniciais, null, 2)
+    );
+
+    return [...frasesIniciais];
   }
+
   return JSON.parse(fs.readFileSync(filePath, 'utf8'));
 }
 
-function salvarFraseNoArquivo(novaFrase) {
+function salvarFrase(frase) {
   const frases = obterFrases();
-  frases.push(novaFrase.trim());
-  fs.writeFileSync(filePath, JSON.stringify(frases, null, 2));
-}
 
-// ==========================================
-// LÓGICA DE SORTEIO SEM REPETIÇÃO
-// ==========================================
-function obterNumeroDaSemana(data) {
-  const primeiroDiaDoAno = new Date(data.getFullYear(), 0, 1);
-  const diasPassados = Math.floor((data - primeiroDiaDoAno) / (24 * 60 * 60 * 1000));
-  return Math.ceil((diasPassados + primeiroDiaDoAno.getDay() + 1) / 7);
+  frases.push(frase.trim());
+
+  fs.writeFileSync(
+    filePath,
+    JSON.stringify(frases, null, 2)
+  );
 }
 
 function obterFraseDoDia() {
   const frases = obterFrases();
   const hoje = new Date();
-  const ano = hoje.getFullYear();
-  const semana = obterNumeroDaSemana(hoje);
-  const diaDaSemana = hoje.getDay();
 
-  const sementeSemana = ano * 100 + semana;
-  const indice = (sementeSemana + diaDaSemana) % frases.length;
+  const inicioAno = new Date(hoje.getFullYear(), 0, 1);
 
-  return {
-    frase: frases[indice],
-    data: hoje.toLocaleDateString("pt-BR", { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
-  };
+  const dias = Math.floor(
+    (hoje - inicioAno) / 86400000
+  );
+
+  const indice = dias % frases.length;
+
+  return frases[indice];
 }
 
-// ==========================================
-// FUNÇÃO DE NOTIFICAÇÃO
-// ==========================================
-function dispararNotificacao(frase) {
-  notifier.notify({
-    title: '✨ Frase do Dia Motivacional',
-    message: frase,
-    sound: true, // Toca som padrão do sistema
-    wait: false
+function obterDataFormatada() {
+  return new Date().toLocaleDateString('pt-BR', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric'
   });
 }
 
 // ==========================================
-// INTERFACE GRÁFICA DE TERMINAL (UI)
+// TEMA
 // ==========================================
-function mostrarMenu() {
-  console.clear();
 
-  console.log(
-    chalk.cyan(
-      figlet.textSync('Frase do Dia', { horizontalLayout: 'fitted' })
-    )
+const theme = {
+  bg: '#1e222a',
+  surface: '#282c34',
+  border: '#61afef',
+  primary: '#98c379',
+  text: '#abb2bf',
+  muted: '#5c6370',
+  yellow: '#e5c07b',
+  red: '#e06c75',
+  purple: '#c678dd'
+};
+
+// ==========================================
+// SCREEN
+// ==========================================
+
+const screen = blessed.screen({
+  smartCSR: true,
+  fullUnicode: true,
+  title: 'Frase do Dia',
+  autoPadding: true
+});
+
+screen.program.hideCursor();
+
+screen.style = {
+  bg: theme.bg
+};
+
+// ==========================================
+// CONTAINER PRINCIPAL
+// ==========================================
+
+const container = blessed.box({
+  parent: screen,
+
+  top: 'center',
+  left: 'center',
+
+  width: 76,
+  height: 24,
+
+  border: {
+    type: 'line'
+  },
+
+  style: {
+    bg: theme.bg,
+    border: {
+      fg: theme.border
+    }
+  }
+});
+
+// ==========================================
+// HEADER
+// ==========================================
+
+const ascii = figlet.textSync('Frase do Dia', {
+  font: 'Small'
+});
+
+blessed.box({
+  parent: container,
+
+  top: 1,
+  left: 0,
+
+  width: '100%-2',
+  height: 6,
+
+  content: ascii,
+
+  align: 'center',
+
+  style: {
+    fg: theme.primary,
+    bg: theme.bg
+  }
+});
+
+// ==========================================
+// FRASE
+// ==========================================
+
+const quoteBox = blessed.box({
+  parent: container,
+
+  top: 8,
+  left: 'center',
+
+  width: '90%',
+  height: 6,
+
+  border: {
+    type: 'line'
+  },
+
+  label: ` ${obterDataFormatada()} `,
+
+  content: '',
+
+  align: 'center',
+  valign: 'middle',
+
+  tags: true,
+
+  padding: {
+    left: 2,
+    right: 2
+  },
+
+  style: {
+    bg: theme.surface,
+    fg: theme.yellow,
+
+    border: {
+      fg: theme.yellow
+    },
+
+    label: {
+      fg: theme.primary
+    }
+  }
+});
+
+// ==========================================
+// MENU
+// ==========================================
+
+const menu = blessed.list({
+  parent: container,
+
+  top: 15,
+  left: 'center',
+
+  width: '80%',
+  height: 5,
+
+  keys: true,
+  vi: true,
+  mouse: true,
+
+  interactive: true,
+
+  items: [
+    '  Atualizar frase',
+    '  Adicionar nova frase',
+    '  Agendar notificação',
+    '  Sair'
+  ],
+
+  style: {
+    bg: theme.bg,
+
+    item: {
+      fg: theme.text
+    },
+
+    selected: {
+      bg: theme.border,
+      fg: theme.bg,
+      bold: true
+    }
+  }
+});
+
+// ==========================================
+// FOOTER
+// ==========================================
+
+blessed.box({
+  parent: container,
+
+  bottom: 1,
+  left: 0,
+
+  width: '100%-2',
+  height: 1,
+
+  content: '↑/↓ Navegar  •  ENTER Selecionar  •  Q Sair',
+
+  align: 'center',
+
+  style: {
+    fg: theme.muted,
+    bg: theme.bg
+  }
+});
+
+// ==========================================
+// ESTADO
+// ==========================================
+
+let fraseAtual = obterFraseDoDia();
+let modalAberto = false;
+let modalAtual = null;
+let mensagemAtual = null;
+
+// ==========================================
+// ATUALIZAÇÃO
+// ==========================================
+
+function atualizarTela() {
+  quoteBox.setContent(
+    `{center}${fraseAtual}{/center}`
   );
-  console.log(chalk.gray('═'.repeat(60)));
 
-  const { frase, data } = obterFraseDoDia();
-  
-  console.log(chalk.yellow(`📅  ${data}\n`));
-  console.log(chalk.white.bgBlue.bold(' ✨ FRASE MOTIVACIONAL DO DIA ✨ '));
-  console.log(chalk.cyan.italic(`\n   "${frase}"\n`));
-  
-  console.log(chalk.gray('═'.repeat(60)));
-  console.log(chalk.green('[1]') + chalk.white(' Atualizar / Ver Frase do Dia'));
-  console.log(chalk.green('[2]') + chalk.white(' Adicionar nova frase motivacional'));
-  console.log(chalk.green('[3]') + chalk.white(' Agendar notificação personalizada (ex: daqui a X min)'));
-  console.log(chalk.red('[0]') + chalk.white(' Sair'));
-  console.log(chalk.gray('═'.repeat(60)));
+  screen.render();
+}
 
-  rl.question(chalk.magenta('\n👉 Escolha uma opção: '), (opcao) => {
-    switch (opcao.trim()) {
-      case '1':
-        mostrarMenu();
-        break;
-        
-      case '2':
-        console.clear();
-        console.log(chalk.blue.bold('\n📝 CADASTRAR NOVA FRASE\n'));
-        rl.question(chalk.yellow('Digite a frase motivacional: '), (novaFrase) => {
-          if (novaFrase && novaFrase.trim() !== "") {
-            salvarFraseNoArquivo(novaFrase);
-            console.log(chalk.green('\n✅ Frase adicionada com sucesso!'));
-          } else {
-            console.log(chalk.red('\n❌ Erro: A frase não pode estar vazia.'));
-          }
-          setTimeout(mostrarMenu, 2000);
-        });
-        break;
+function atualizarFrase() {
+  const frases = obterFrases();
 
-      case '3':
-        console.clear();
-        console.log(chalk.blue.bold('\n⏰ AGENDAR NOTIFICAÇÃO\n'));
-        rl.question(chalk.yellow('Daqui a quantos minutos você quer receber a notificação? '), (minutosInput) => {
-          const minutos = parseFloat(minutosInput);
+  if (frases.length === 0) return;
 
-          if (isNaN(minutos) || minutos <= 0) {
-            console.log(chalk.red('\n❌ Por favor, digite um número válido de minutos.'));
-            setTimeout(mostrarMenu, 2000);
-            return;
-          }
+  if (frases.length === 1) {
+    fraseAtual = frases[0];
+  } else {
+    const alternativas = frases.filter(
+      frase => frase !== fraseAtual
+    );
 
-          const ms = minutos * 60 * 1000;
-          console.log(chalk.yellow(`\n⏳ Notificação agendada com sucesso para daqui a ${minutos} minuto(s)!`));
-          console.log(chalk.gray('Você pode continuar usando o terminal ou minimizá-lo.'));
-          
-          // Agenda o disparo
-          setTimeout(() => {
-            const dadosAtuais = obterFraseDoDia();
-            dispararNotificacao(dadosAtuais.frase);
-          }, ms);
+    fraseAtual = alternativas[
+      Math.floor(Math.random() * alternativas.length)
+    ];
+  }
 
-          setTimeout(mostrarMenu, 4000);
-        });
-        break;
+  atualizarTela();
+}
 
-      case '0':
-        console.log(chalk.cyan('\n✨ Tenha um dia incrível e produtivo! Até logo! ✨\n'));
-        rl.close();
-        break;
+// ==========================================
+// MODAL BASE
+// ==========================================
 
-      default:
-        console.log(chalk.red('\n❌ Opção inválida! Tente novamente.'));
-        setTimeout(mostrarMenu, 1500);
-        break;
+function criarModal(titulo, cor = theme.primary) {
+  if (modalAberto) return null;
+
+  modalAberto = true;
+
+  menu.hide();
+
+  const overlay = blessed.box({
+    parent: screen,
+
+    top: 0,
+    left: 0,
+
+    width: '100%',
+    height: '100%',
+
+    style: {
+      bg: theme.bg
+    }
+  });
+
+  const modal = blessed.box({
+    parent: overlay,
+
+    top: 'center',
+    left: 'center',
+
+    width: 62,
+    height: 12,
+
+    border: {
+      type: 'line'
+    },
+
+    label: ` ${titulo} `,
+
+    padding: {
+      left: 2,
+      right: 2
+    },
+
+    style: {
+      bg: theme.surface,
+      fg: theme.text,
+
+      border: {
+        fg: cor
+      },
+
+      label: {
+        fg: cor,
+        bold: true
+      }
+    }
+  });
+
+  modalAtual = overlay;
+
+  return modal;
+}
+
+// ==========================================
+// FECHAR MODAL
+// ==========================================
+
+function fecharModal() {
+  if (!modalAberto) return;
+
+  if (modalAtual) {
+    modalAtual.destroy();
+    modalAtual = null;
+  }
+
+  modalAberto = false;
+
+  menu.show();
+  menu.focus();
+
+  screen.program.hideCursor();
+  screen.render();
+}
+
+// ==========================================
+// INPUT MODAL
+// ==========================================
+
+function abrirModalInput({
+  titulo,
+  descricao,
+  cor,
+  placeholder,
+  onSubmit
+}) {
+  const modal = criarModal(titulo, cor);
+
+  if (!modal) return;
+
+  blessed.box({
+    parent: modal,
+
+    top: 1,
+    left: 2,
+
+    width: '100%-6',
+    height: 1,
+
+    content: descricao,
+
+    style: {
+      bg: theme.surface,
+      fg: theme.text
+    }
+  });
+
+  const input = blessed.textbox({
+    parent: modal,
+
+    top: 3,
+    left: 2,
+
+    width: '100%-6',
+    height: 3,
+
+    border: {
+      type: 'line'
+    },
+
+    inputOnFocus: false,
+
+    keys: true,
+
+    mouse: true,
+
+    style: {
+      bg: theme.bg,
+      fg: theme.text,
+
+      border: {
+        fg: theme.muted
+      },
+
+      focus: {
+        border: {
+          fg: cor
+        }
+      }
+    }
+  });
+
+  input.setValue(placeholder || '');
+
+  blessed.box({
+    parent: modal,
+
+    bottom: 1,
+    left: 2,
+
+    width: '100%-6',
+    height: 1,
+
+    content: 'ENTER Salvar  •  ESC Cancelar',
+
+    align: 'center',
+
+    style: {
+      bg: theme.surface,
+      fg: theme.muted
+    }
+  });
+
+  input.on('submit', value => {
+    fecharModal();
+    onSubmit(value);
+  });
+
+  input.on('cancel', () => {
+    fecharModal();
+  });
+
+  input.focus();
+
+  screen.render();
+
+  input.readInput();
+}
+
+// ==========================================
+// ADICIONAR FRASE
+// ==========================================
+
+function abrirModalAdicionar() {
+  abrirModalInput({
+    titulo: 'Adicionar nova frase',
+
+    descricao: 'Digite a frase que deseja adicionar:',
+
+    cor: theme.primary,
+
+    placeholder: '',
+
+    onSubmit(value) {
+      if (!value || !value.trim()) {
+        exibirMensagem(
+          'A frase não pode estar vazia.',
+          theme.red
+        );
+
+        return;
+      }
+
+      salvarFrase(value);
+
+      fraseAtual = value.trim();
+
+      atualizarTela();
+
+      exibirMensagem(
+        'Frase adicionada com sucesso!',
+        theme.primary
+      );
     }
   });
 }
 
-// Iniciar o app
-mostrarMenu();
+// ==========================================
+// NOTIFICAÇÃO
+// ==========================================
+
+function abrirModalNotificacao() {
+  abrirModalInput({
+    titulo: 'Agendar notificação',
+
+    descricao: 'Receber notificação em quantos minutos?',
+
+    cor: theme.purple,
+
+    placeholder: '',
+
+    onSubmit(value) {
+      const minutos = Number(value);
+
+      if (
+        !Number.isFinite(minutos) ||
+        minutos <= 0 ||
+        minutos * 60000 > 2147483647
+      ) {
+        exibirMensagem(
+          'Informe um tempo válido.',
+          theme.red
+        );
+
+        return;
+      }
+
+      setTimeout(() => {
+        notifier.notify({
+          title: 'Frase do Dia',
+          message: obterFraseDoDia(),
+          sound: true
+        });
+      }, minutos * 60000);
+
+      exibirMensagem(
+        `Notificação agendada para ${minutos} min.`,
+        theme.purple
+      );
+    }
+  });
+}
+
+// ==========================================
+// FEEDBACK
+// ==========================================
+
+function exibirMensagem(texto, cor = theme.primary) {
+  if (mensagemAtual) {
+    mensagemAtual.destroy();
+  }
+
+  const mensagem = blessed.box({
+    parent: screen,
+
+    top: 'center',
+    left: 'center',
+
+    width: 52,
+    height: 5,
+
+    border: {
+      type: 'line'
+    },
+
+    content: texto,
+
+    align: 'center',
+    valign: 'middle',
+
+    style: {
+      bg: theme.surface,
+      fg: cor,
+
+      border: {
+        fg: cor
+      }
+    }
+  });
+
+  mensagemAtual = mensagem;
+
+  screen.render();
+
+  setTimeout(() => {
+    if (mensagemAtual === mensagem) {
+      mensagem.destroy();
+      mensagemAtual = null;
+      screen.render();
+    }
+  }, 2000);
+}
+
+// ==========================================
+// EVENTOS
+// ==========================================
+
+menu.on('select', (_, index) => {
+  if (modalAberto) return;
+
+  switch (index) {
+    case 0:
+      atualizarFrase();
+      break;
+
+    case 1:
+      abrirModalAdicionar();
+      break;
+
+    case 2:
+      abrirModalNotificacao();
+      break;
+
+    case 3:
+      encerrar();
+      break;
+  }
+});
+
+// ==========================================
+// SAÍDA
+// ==========================================
+
+function encerrar() {
+  screen.destroy();
+  process.exit(0);
+}
+
+screen.key(['C-c'], encerrar);
+
+screen.key(['q'], () => {
+  if (!modalAberto) {
+    encerrar();
+  }
+});
+
+screen.key(['escape'], () => {
+  if (modalAberto) {
+    fecharModal();
+  } else {
+    encerrar();
+  }
+});
+
+// ==========================================
+// INICIALIZAÇÃO
+// ==========================================
+
+atualizarTela();
+
+menu.focus();
+
+screen.render();

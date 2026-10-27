@@ -7,4 +7,4 @@
 - [x] Agendamento de notificação
 
 # Mudanças futuras
-- [ ] Criação da TUI
+- [x] Criação da TUI

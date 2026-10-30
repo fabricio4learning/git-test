@@ -14,4 +14,4 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Exibir mensagem
-        uses: echo "Hello World 🚀"
+        run: echo "Hello World 🚀"

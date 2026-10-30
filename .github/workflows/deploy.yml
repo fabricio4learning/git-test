@@ -1,0 +1,30 @@
+name: Deploy Landing Page
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+
+    steps:
+      - name: Checar repositório 
+        uses: actions/checkout@v4
+
+      - name: Configurar paginas
+        uses: actions/configure-pages@v5
+      
+      - name: Enviar arquivos
+        uses: actions/upload-pages-artifact@v1
+        with:
+          path: ./
+      
+      - name: Publicar no GitHub Pages
+        uses: actions/deploy-pages@v4

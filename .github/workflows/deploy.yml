@@ -22,7 +22,7 @@ jobs:
         uses: actions/configure-pages@v6
       
       - name: Enviar arquivos
-        uses: actions/upload-pages-artifact@v1
+        uses: actions/upload-pages-artifact@v5
         with:
           path: ./
       
